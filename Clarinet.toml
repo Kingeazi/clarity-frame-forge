@@ -8,6 +8,10 @@ requirements = []
 path = "contracts/frame.clar"
 depends_on = []
 
+[contracts.sequence]
+path = "contracts/sequence.clar"
+depends_on = []
+
 [repl]
 costs_version = 2
 parser_version = 2

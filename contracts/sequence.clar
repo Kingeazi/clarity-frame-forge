@@ -3,6 +3,7 @@
 ;; Constants
 (define-constant err-not-found (err u102))
 (define-constant err-unauthorized (err u103))
+(define-constant err-invalid-frame (err u104))
 
 ;; Sequence Data
 (define-map sequences uint 
@@ -10,7 +11,8 @@
     owner: principal,
     name: (string-utf8 64),
     frames: (list 100 uint),
-    collaborators: (list 10 principal)
+    collaborators: (list 10 principal),
+    last-modified: uint
   }
 )
 
@@ -24,7 +26,8 @@
         owner: tx-sender,
         name: name,
         frames: (list),
-        collaborators: (list)
+        collaborators: (list),
+        last-modified: block-height
       }
     )
     (var-set sequence-counter seq-id)
@@ -40,11 +43,22 @@
       (is-some (index-of? (get collaborators sequence) tx-sender))
     ) err-unauthorized)
     
+    ;; Check if frame already exists in sequence
+    (asserts! (is-none (index-of? (get frames sequence) frame-id)) err-invalid-frame)
+    
     (map-set sequences sequence-id
       (merge sequence
-        {frames: (unwrap! (as-max-len? (concat (get frames sequence) (list frame-id)) u100) err-unauthorized)}
+        {
+          frames: (unwrap! (as-max-len? (concat (get frames sequence) (list frame-id)) u100) err-unauthorized),
+          last-modified: block-height
+        }
       )
     )
     (ok true)
   )
+)
+
+;; Get sequence details
+(define-read-only (get-sequence (sequence-id uint))
+  (map-get? sequences sequence-id)
 )

@@ -4,6 +4,7 @@
 (define-constant err-not-found (err u102))
 (define-constant err-unauthorized (err u103))
 (define-constant err-invalid-frame (err u104))
+(define-constant err-invalid-sequence (err u105))
 
 ;; Sequence Data
 (define-map sequences uint 
@@ -54,6 +55,38 @@
         }
       )
     )
+    (ok true)
+  )
+)
+
+;; Reorder frames in sequence
+(define-public (reorder-frames (sequence-id uint) (new-order (list 100 uint)))
+  (let ((sequence (unwrap! (map-get? sequences sequence-id) err-not-found)))
+    (asserts! (or
+      (is-eq (get owner sequence) tx-sender)
+      (is-some (index-of? (get collaborators sequence) tx-sender))
+    ) err-unauthorized)
+    
+    ;; Validate that new order contains same frames
+    (asserts! (is-eq (len (get frames sequence)) (len new-order)) err-invalid-sequence)
+    
+    (map-set sequences sequence-id
+      (merge sequence
+        {
+          frames: new-order,
+          last-modified: block-height
+        }
+      )
+    )
+    (ok true)
+  )
+)
+
+;; Delete sequence
+(define-public (delete-sequence (sequence-id uint))
+  (let ((sequence (unwrap! (map-get? sequences sequence-id) err-not-found)))
+    (asserts! (is-eq (get owner sequence) tx-sender) err-unauthorized)
+    (map-delete sequences sequence-id)
     (ok true)
   )
 )
